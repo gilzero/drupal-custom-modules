@@ -1,0 +1,7 @@
+name: PDF GPT Chat
+type: module
+description: 'Allows chatting with PDF documents using OpenAI GPT.'
+package: Custom
+core_version_requirement: ^11
+dependencies:
+  - drupal:file

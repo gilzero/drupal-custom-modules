@@ -1,0 +1,14 @@
+# Ignore Composer dependencies
+vendor/
+
+# Ignore node modules
+node_modules/
+
+# Ignore log files
+*.log
+
+# Ignore Drupal's private files
+private/
+
+# Ignore temporary files
+tmp/

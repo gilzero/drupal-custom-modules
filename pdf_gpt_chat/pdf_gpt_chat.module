@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * @file
+ * Contains pdf_gpt_chat module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function pdf_gpt_chat_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.pdf_gpt_chat':
+      return '<p>' . t('Allows chatting with PDF documents using OpenAI GPT.') . '</p>';
+  }
+}
+

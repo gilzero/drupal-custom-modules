@@ -1,0 +1,7 @@
+pdf_gpt_chat.form:
+  path: '/pdf-gpt-chat'
+  defaults:
+    _form: '\Drupal\pdf_gpt_chat\Form\PdfGptChatForm'
+    _title: 'PDF GPT Chat'
+  requirements:
+    _permission: 'access content'
