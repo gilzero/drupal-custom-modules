@@ -1,0 +1,6 @@
+services:
+  pdf_gpt_chat.form:
+    class: Drupal\pdf_gpt_chat\Form\PdfGptChatForm
+    arguments: ['@http_client', '@config.factory', '@file_system', '@messenger', '@file.validator']
+    tags:
+      - { name: form }

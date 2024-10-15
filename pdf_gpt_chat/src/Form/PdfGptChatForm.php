@@ -11,6 +11,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Smalot\PdfParser\Parser;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\file\Validation\FileValidatorInterface;
 
 class PdfGptChatForm extends FormBase {
 
@@ -18,17 +19,20 @@ class PdfGptChatForm extends FormBase {
   protected $configFactory;
   protected $fileSystem;
   protected $messenger;
+  protected $fileValidator;
 
   public function __construct(
     ClientInterface $http_client,
     ConfigFactoryInterface $config_factory,
     FileSystemInterface $file_system,
-    MessengerInterface $messenger
+    MessengerInterface $messenger,
+    FileValidatorInterface $file_validator
   ) {
     $this->httpClient = $http_client;
     $this->configFactory = $config_factory;
     $this->fileSystem = $file_system;
     $this->messenger = $messenger;
+    $this->fileValidator = $file_validator;
     $this->ensureUploadDirectory();
   }
 
@@ -37,15 +41,14 @@ class PdfGptChatForm extends FormBase {
       $container->get('http_client'),
       $container->get('config.factory'),
       $container->get('file_system'),
-      $container->get('messenger')
+      $container->get('messenger'),
+      $container->get('file.validator')
     );
   }
 
   protected function ensureUploadDirectory() {
     $directory = 'public://pdf_gpt_chat';
-    if (!$this->fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS)) {
-      $this->messenger->addError($this->t('The upload directory %directory could not be created or is not writable. Please contact the site administrator.', ['%directory' => $directory]));
-    }
+    $this->fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
   }
 
   public function getFormId() {
@@ -53,10 +56,17 @@ class PdfGptChatForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
+    $validators = [
+      'FileExtension' => [
+        'extensions' => 'pdf',
+      ],
+    ];
+
     $form['pdf_file'] = [
       '#type' => 'managed_file',
       '#title' => $this->t('Upload PDF'),
       '#upload_location' => 'public://pdf_gpt_chat/',
+      '#upload_validators' => $validators,
       '#required' => TRUE,
     ];
 
@@ -83,9 +93,17 @@ class PdfGptChatForm extends FormBase {
       return;
     }
 
-    $extension = pathinfo($file->getFilename(), PATHINFO_EXTENSION);
-    if (strtolower($extension) !== 'pdf') {
-      $this->messenger->addError($this->t('Only PDF files are allowed.'));
+    $validators = [
+      'FileExtension' => [
+        'extensions' => 'pdf',
+      ],
+    ];
+
+    $violations = $this->fileValidator->validate($file, $validators);
+    if (count($violations) > 0) {
+      foreach ($violations as $violation) {
+        $this->messenger->addError($violation->getMessage());
+      }
       return;
     }
 
@@ -105,7 +123,7 @@ class PdfGptChatForm extends FormBase {
 
   protected function extractTextFromPdf($file) {
     $parser = new Parser();
-    $pdf = $parser->parseFile($this->fileSystem->realpath($file->getFileUri()));
+    $pdf = $parser->parseFile($file->getFileUri());
     return $pdf->getText();
   }
 
@@ -138,5 +156,4 @@ class PdfGptChatForm extends FormBase {
     $result = json_decode($response->getBody(), TRUE);
     return $result['choices'][0]['message']['content'] ?? 'No response generated.';
   }
-
 }

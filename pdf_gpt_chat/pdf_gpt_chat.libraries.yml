@@ -1,0 +1,11 @@
+pdf_gpt_chat:
+  version: 1.x
+  css:
+    theme:
+      css/pdf_gpt_chat.css: {}
+  js:
+    js/pdf_gpt_chat.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
