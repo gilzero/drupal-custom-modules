@@ -12,6 +12,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Smalot\PdfParser\Parser;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\file\Validation\FileValidatorInterface;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\AppendCommand;
 
 class PdfGptChatForm extends FormBase {
 
@@ -56,6 +58,8 @@ class PdfGptChatForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
+    $form['#attached']['library'][] = 'pdf_gpt_chat/pdf_gpt_chat';
+
     $validators = [
       'FileExtension' => [
         'extensions' => 'pdf',
@@ -79,18 +83,33 @@ class PdfGptChatForm extends FormBase {
     $form['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Chat'),
+      '#ajax' => [
+        'callback' => '::ajaxSubmitCallback',
+        'effect' => 'fade',
+        'progress' => [
+          'type' => 'throbber',
+          'message' => $this->t('Processing...'),
+        ],
+      ],
+    ];
+
+    $form['chat_log'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'pdf-gpt-chat-log'],
+      '#weight' => 90,
     ];
 
     return $form;
   }
 
-  public function submitForm(array &$form, FormStateInterface $form_state) {
+  public function submitForm(array &$form, FormStateInterface $form_state) {}
+
+  public function ajaxSubmitCallback(array &$form, FormStateInterface $form_state) {
     $fid = $form_state->getValue('pdf_file')[0];
     $file = File::load($fid);
 
     if (!$file) {
-      $this->messenger->addError($this->t('Failed to load the uploaded file.'));
-      return;
+      return $this->ajaxErrorResponse($this->t('Failed to load the uploaded file.'));
     }
 
     $validators = [
@@ -101,10 +120,11 @@ class PdfGptChatForm extends FormBase {
 
     $violations = $this->fileValidator->validate($file, $validators);
     if (count($violations) > 0) {
+      $errors = [];
       foreach ($violations as $violation) {
-        $this->messenger->addError($violation->getMessage());
+        $errors[] = $violation->getMessage();
       }
-      return;
+      return $this->ajaxErrorResponse(implode('<br>', $errors));
     }
 
     $question = $form_state->getValue('question');
@@ -114,11 +134,21 @@ class PdfGptChatForm extends FormBase {
       $prompt = $this->preparePrompt($pdf_text, $question);
       $response = $this->sendToOpenAI($prompt);
 
-      $this->messenger->addMessage($this->t('Response: @response', ['@response' => $response]));
+      $output = $this->formatResponse($question, $response);
+
+      $ajax_response = new AjaxResponse();
+      $ajax_response->addCommand(new AppendCommand('#pdf-gpt-chat-log', $output));
+      return $ajax_response;
     }
     catch (\Exception $e) {
-      $this->messenger->addError($this->t('An error occurred while processing your request: @error', ['@error' => $e->getMessage()]));
+      return $this->ajaxErrorResponse($this->t('An error occurred: @error', ['@error' => $e->getMessage()]));
     }
+  }
+
+  protected function ajaxErrorResponse($message) {
+    $ajax_response = new AjaxResponse();
+    $ajax_response->addCommand(new AppendCommand('#pdf-gpt-chat-log', '<div class="error-message">' . $message . '</div>'));
+    return $ajax_response;
   }
 
   protected function extractTextFromPdf($file) {
@@ -155,5 +185,11 @@ class PdfGptChatForm extends FormBase {
 
     $result = json_decode($response->getBody(), TRUE);
     return $result['choices'][0]['message']['content'] ?? 'No response generated.';
+  }
+
+  protected function formatResponse($question, $answer) {
+    $formatted = "<div class='chat-message user-message'><strong>You:</strong> " . nl2br(htmlspecialchars($question)) . "</div>";
+    $formatted .= "<div class='chat-message ai-message'><strong>AI:</strong> " . nl2br(htmlspecialchars($answer)) . "</div>";
+    return $formatted;
   }
 }
