@@ -14,6 +14,9 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\file\Validation\FileValidatorInterface;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\AppendCommand;
+use Drupal\Core\Cache\CacheBackendInterface;
+use GuzzleHttp\Exception\RequestException;
+use Parsedown;
 
 class PdfGptChatForm extends FormBase {
 
@@ -22,19 +25,22 @@ class PdfGptChatForm extends FormBase {
   protected $fileSystem;
   protected $messenger;
   protected $fileValidator;
+  protected $cache;
 
   public function __construct(
     ClientInterface $http_client,
     ConfigFactoryInterface $config_factory,
     FileSystemInterface $file_system,
     MessengerInterface $messenger,
-    FileValidatorInterface $file_validator
+    FileValidatorInterface $file_validator,
+    CacheBackendInterface $cache
   ) {
     $this->httpClient = $http_client;
     $this->configFactory = $config_factory;
     $this->fileSystem = $file_system;
     $this->messenger = $messenger;
     $this->fileValidator = $file_validator;
+    $this->cache = $cache;
     $this->ensureUploadDirectory();
   }
 
@@ -44,7 +50,8 @@ class PdfGptChatForm extends FormBase {
       $container->get('config.factory'),
       $container->get('file_system'),
       $container->get('messenger'),
-      $container->get('file.validator')
+      $container->get('file.validator'),
+      $container->get('cache.default')
     );
   }
 
@@ -152,9 +159,18 @@ class PdfGptChatForm extends FormBase {
   }
 
   protected function extractTextFromPdf($file) {
+    $cid = 'pdf_gpt_chat:pdf_content:' . $file->id();
+    if ($cache = $this->cache->get($cid)) {
+      return $cache->data;
+    }
+
     $parser = new Parser();
     $pdf = $parser->parseFile($file->getFileUri());
-    return $pdf->getText();
+    $text = $pdf->getText();
+
+    $this->cache->set($cid, $text);
+
+    return $text;
   }
 
   protected function preparePrompt($pdf_text, $question) {
@@ -168,28 +184,34 @@ class PdfGptChatForm extends FormBase {
       throw new \Exception($this->t('OpenAI API key is not configured.'));
     }
 
-    $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
-      'headers' => [
-        'Authorization' => 'Bearer ' . $api_key,
-        'Content-Type' => 'application/json',
-      ],
-      'json' => [
-        'model' => 'gpt-4o-mini',
-        'messages' => [
-          ['role' => 'system', 'content' => 'You are a helpful assistant that answers questions about PDF documents.'],
-          ['role' => 'user', 'content' => $prompt],
+    try {
+      $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
+        'headers' => [
+          'Authorization' => 'Bearer ' . $api_key,
+          'Content-Type' => 'application/json',
         ],
-        'max_tokens' => 150,
-      ],
-    ]);
+        'json' => [
+          'model' => 'gpt-4o-mini',
+          'messages' => [
+            ['role' => 'system', 'content' => 'You are a helpful assistant that answers questions about PDF documents.'],
+            ['role' => 'user', 'content' => $prompt],
+          ],
+          'max_tokens' => 150,
+        ],
+      ]);
 
-    $result = json_decode($response->getBody(), TRUE);
-    return $result['choices'][0]['message']['content'] ?? 'No response generated.';
+      $result = json_decode($response->getBody(), TRUE);
+      return $result['choices'][0]['message']['content'] ?? 'No response generated.';
+    } catch (RequestException $e) {
+      $this->logger('pdf_gpt_chat')->error('OpenAI API request failed: @error', ['@error' => $e->getMessage()]);
+      throw new \Exception($this->t('Failed to get a response from OpenAI. Please try again later.'));
+    }
   }
 
   protected function formatResponse($question, $answer) {
+    $parsedown = new Parsedown();
     $formatted = "<div class='chat-message user-message'><strong>You:</strong> " . nl2br(htmlspecialchars($question)) . "</div>";
-    $formatted .= "<div class='chat-message ai-message'><strong>AI:</strong> " . nl2br(htmlspecialchars($answer)) . "</div>";
+    $formatted .= "<div class='chat-message ai-message'><strong>AI:</strong> <div class='markdown-content'>" . $parsedown->text($answer) . "</div></div>";
     return $formatted;
   }
 }

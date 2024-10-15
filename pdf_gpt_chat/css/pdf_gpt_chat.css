@@ -57,6 +57,44 @@
   background-color: #f0f0f0;
 }
 
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content strong {
+  font-weight: bold;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.5em;
+}
+
+.markdown-content code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.markdown-content pre {
+  background-color: #f4f4f4;
+  padding: 1em;
+  border-radius: 3px;
+  overflow-x: auto;
+}
+
 @media (max-width: 768px) {
   .pdf-gpt-chat-form {
     max-width: 100%;
