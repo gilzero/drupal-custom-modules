@@ -1,0 +1,16 @@
+pdf_gpt_chat.settings:
+  type: config_object
+  label: 'PDF GPT Chat settings'
+  mapping:
+    openai_api_key:
+      type: string
+      label: 'OpenAI API Key'
+    openai_model:
+      type: string
+      label: 'OpenAI Model'
+    max_tokens:
+      type: integer
+      label: 'Max Tokens'
+    temperature:
+      type: float
+      label: 'Temperature'

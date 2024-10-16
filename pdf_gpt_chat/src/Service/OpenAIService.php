@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\pdf_gpt_chat\Service\OpenAIService.php
- */
-
 namespace Drupal\pdf_gpt_chat\Service;
 
 use Drupal\Core\Cache\CacheBackendInterface;
@@ -33,10 +28,15 @@ class OpenAIService {
       return $cache->data;
     }
 
-    $api_key = $this->configFactory->get('pdf_gpt_chat.settings')->get('openai_api_key');
+    $config = $this->configFactory->get('pdf_gpt_chat.settings');
+    $api_key = $config->get('openai_api_key');
     if (!$api_key) {
       throw new \Exception('OpenAI API key is not configured.');
     }
+
+    $model = $config->get('openai_model') ?: 'gpt-3.5-turbo';
+    $max_tokens = $config->get('max_tokens') ?: 4096;
+    $temperature = $config->get('temperature') ?: 0.7;
 
     try {
       $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
@@ -45,12 +45,13 @@ class OpenAIService {
           'Content-Type' => 'application/json',
         ],
         'json' => [
-          'model' => 'gpt-4o-mini', // or 'gpt-3.5-turbo'
+          'model' => $model,
           'messages' => [
             ['role' => 'system', 'content' => 'You are a helpful assistant that answers questions about PDF documents.'],
             ['role' => 'user', 'content' => $prompt],
           ],
-          'max_tokens' => 150,
+          'max_tokens' => $max_tokens,
+          'temperature' => $temperature,
         ],
       ]);
 
@@ -66,5 +67,4 @@ class OpenAIService {
       throw new \Exception('Failed to get a response from OpenAI.');
     }
   }
-
 }
