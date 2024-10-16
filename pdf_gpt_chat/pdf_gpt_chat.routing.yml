@@ -5,3 +5,10 @@ pdf_gpt_chat.form:
     _title: 'PDF GPT Chat'
   requirements:
     _permission: 'access content'
+pdf_gpt_chat.settings:
+  path: '/admin/config/pdf_gpt_chat/settings'
+  defaults:
+    _form: '\Drupal\pdf_gpt_chat\Form\PdfGptChatSettingsForm'
+    _title: 'PDF GPT Chat Settings'
+  requirements:
+    _permission: 'administer pdf_gpt_chat settings'

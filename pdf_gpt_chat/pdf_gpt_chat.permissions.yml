@@ -1,0 +1,4 @@
+administer pdf_gpt_chat settings:
+  title: 'Administer PDF GPT Chat settings'
+  description: 'Allows access to configure the PDF GPT Chat module.'
+  restrict access: true
