@@ -5,3 +5,4 @@ package: Custom
 core_version_requirement: ^11
 dependencies:
   - drupal:file
+configure: pdf_gpt_chat.settings
