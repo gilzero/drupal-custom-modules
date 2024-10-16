@@ -1,6 +1,21 @@
 services:
   pdf_gpt_chat.form:
     class: Drupal\pdf_gpt_chat\Form\PdfGptChatForm
-    arguments: ['@http_client', '@config.factory', '@file_system', '@messenger', '@file.validator']
+    arguments: ['@http_client', '@config.factory', '@file_system', '@messenger', '@file.validator', '@pdf_gpt_chat.pdf_parser', '@pdf_gpt_chat.openai', '@pdf_gpt_chat.chat_history', '@pdf_gpt_chat.message_formatter', '@cache.default']
     tags:
       - { name: form }
+
+  pdf_gpt_chat.pdf_parser:
+    class: Drupal\pdf_gpt_chat\Service\PdfParserService
+    arguments: ['@file_system', '@cache.default']
+
+  pdf_gpt_chat.openai:
+    class: Drupal\pdf_gpt_chat\Service\OpenAIService
+    arguments: ['@http_client', '@config.factory', '@cache.default', '@logger.factory']
+
+  pdf_gpt_chat.chat_history:
+    class: Drupal\pdf_gpt_chat\Service\ChatHistoryService
+    arguments: ['@state']
+
+  pdf_gpt_chat.message_formatter:
+    class: Drupal\pdf_gpt_chat\Service\MessageFormatterService
