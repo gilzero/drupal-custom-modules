@@ -4,8 +4,22 @@ namespace Drupal\pdf_gpt_chat\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\pdf_gpt_chat\Service\LoggingService;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class PdfGptChatSettingsForm extends ConfigFormBase {
+
+  protected $loggingService;
+
+  public function __construct(LoggingService $logging_service) {
+    $this->loggingService = $logging_service;
+  }
+
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('pdf_gpt_chat.logging')
+    );
+  }
 
   public function getFormId() {
     return 'pdf_gpt_chat_settings_form';
@@ -17,7 +31,10 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('pdf_gpt_chat.settings');
-  
+    
+    $this->loggingService->logSystemEvent('settings_form_build', 'Building PDF GPT Chat settings form');
+
+
     $form['openai_api_key'] = [
       '#type' => 'textarea',
       '#title' => $this->t('OpenAI API Key'),
@@ -69,10 +86,10 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
       '#max' => 2,
       '#step' => 0.1,
     ];
-  
+
     return parent::buildForm($form, $form_state);
   }
-  
+
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $this->config('pdf_gpt_chat.settings')
       ->set('openai_api_key', trim($form_state->getValue('openai_api_key')))
@@ -81,7 +98,13 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
       ->set('max_tokens', $form_state->getValue('max_tokens'))
       ->set('temperature', $form_state->getValue('temperature'))
       ->save();
-  
+
+    $this->loggingService->logSystemEvent('settings_form_submit', 'PDF GPT Chat settings updated', [
+      'openai_model' => $form_state->getValue('openai_model'),
+      'max_tokens' => $form_state->getValue('max_tokens'),
+      'temperature' => $form_state->getValue('temperature'),
+    ]);
+
     parent::submitForm($form, $form_state);
   }
 
@@ -89,6 +112,7 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
     $api_key = $form_state->getValue('openai_api_key');
     if (preg_match('/\s/', $api_key)) {
       $form_state->setErrorByName('openai_api_key', $this->t('The API key should not contain any whitespace characters.'));
+      $this->loggingService->logError('Invalid API key format in settings form');
     }
   }
 }

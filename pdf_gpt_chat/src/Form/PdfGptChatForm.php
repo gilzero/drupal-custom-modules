@@ -9,6 +9,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\pdf_gpt_chat\Service\ChatProcessorService;
 use Drupal\pdf_gpt_chat\Service\ErrorHandlerService;
 use Drupal\pdf_gpt_chat\Service\FileHandlerService;
+use Drupal\pdf_gpt_chat\Service\LoggingService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class PdfGptChatForm extends FormBase {
@@ -16,22 +17,26 @@ class PdfGptChatForm extends FormBase {
   protected $chatProcessor;
   protected $errorHandler;
   protected $fileHandler;
+  protected $loggingService;
 
   public function __construct(
     ChatProcessorService $chat_processor,
     ErrorHandlerService $error_handler,
-    FileHandlerService $file_handler
+    FileHandlerService $file_handler,
+    LoggingService $logging_service
   ) {
     $this->chatProcessor = $chat_processor;
     $this->errorHandler = $error_handler;
     $this->fileHandler = $file_handler;
+    $this->loggingService = $logging_service;
   }
 
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('pdf_gpt_chat.chat_processor'),
       $container->get('pdf_gpt_chat.error_handler'),
-      $container->get('pdf_gpt_chat.file_handler')
+      $container->get('pdf_gpt_chat.file_handler'),
+      $container->get('pdf_gpt_chat.logging')
     );
   }
 
@@ -40,6 +45,8 @@ class PdfGptChatForm extends FormBase {
   }
 
   public function buildForm(array $form, FormStateInterface $form_state) {
+    $this->loggingService->logSystemEvent('form_build', 'Building PDF GPT Chat form');
+    
     $form['#attached']['library'][] = 'pdf_gpt_chat/pdf_gpt_chat';
 
     $validators = [
@@ -91,7 +98,9 @@ class PdfGptChatForm extends FormBase {
     return $form;
   }
 
-  public function submitForm(array &$form, FormStateInterface $form_state) {}
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    // This method is intentionally left empty as we're using AJAX submission
+  }
 
   public function ajaxSubmitCallback(array &$form, FormStateInterface $form_state) {
     try {
@@ -99,13 +108,34 @@ class PdfGptChatForm extends FormBase {
       $file = $this->fileHandler->validateAndLoadFile($fid);
       $question = $form_state->getValue('question');
 
+      $this->loggingService->logSystemEvent('chat_process_start', 'Starting chat process', [
+        'file_id' => $fid,
+        'user_id' => $this->currentUser()->id(),
+      ]);
+
       $output = $this->chatProcessor->processChat($file, $question);
+
+      $this->loggingService->logInteraction(
+        $this->currentUser()->id(),
+        $fid,
+        $question,
+        $output
+      );
 
       $ajax_response = new AjaxResponse();
       $ajax_response->addCommand(new AppendCommand('#pdf-gpt-chat-log', $output));
+
+      $this->loggingService->logSystemEvent('chat_process_end', 'Chat process completed successfully', [
+        'file_id' => $fid,
+        'user_id' => $this->currentUser()->id(),
+      ]);
+
       return $ajax_response;
     }
     catch (\Exception $e) {
+      $this->loggingService->logError('Error in chat process: ' . $e->getMessage(), [
+        'exception' => $e,
+      ]);
       return $this->errorHandler->handleAjaxError($e);
     }
   }

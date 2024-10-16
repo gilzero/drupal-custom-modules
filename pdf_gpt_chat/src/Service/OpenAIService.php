@@ -14,23 +14,33 @@ class OpenAIService {
   protected $configFactory;
   protected $cache;
   protected $logger;
+  protected $loggingService;
 
-  public function __construct(ClientInterface $http_client, ConfigFactoryInterface $config_factory, CacheBackendInterface $cache, LoggerChannelFactoryInterface $logger_factory) {
+  public function __construct(
+    ClientInterface $http_client,
+    ConfigFactoryInterface $config_factory,
+    CacheBackendInterface $cache,
+    LoggerChannelFactoryInterface $logger_factory,
+    LoggingService $logging_service
+  ) {
     $this->httpClient = $http_client;
     $this->configFactory = $config_factory;
     $this->cache = $cache;
     $this->logger = $logger_factory->get('pdf_gpt_chat');
+    $this->loggingService = $logging_service;
   }
 
   public function query(string $prompt) {
     $cid = 'pdf_gpt_chat:openai_response:' . md5($prompt);
     if ($cache = $this->cache->get($cid)) {
+      $this->loggingService->logSystemEvent('openai_cache_hit', 'OpenAI response retrieved from cache');
       return $cache->data;
     }
 
     $config = $this->configFactory->get('pdf_gpt_chat.settings');
     $api_key = $config->get('openai_api_key');
     if (!$api_key) {
+      $this->loggingService->logError('OpenAI API key is not configured.');
       throw new \Exception('OpenAI API key is not configured.');
     }
 
@@ -40,6 +50,12 @@ class OpenAIService {
     $system_prompt = $config->get('system_prompt') ?: 'You are a helpful assistant that answers questions about PDF documents.';
 
     try {
+      $this->loggingService->logSystemEvent('openai_api_request', 'Sending request to OpenAI API', [
+        'model' => $model,
+        'max_tokens' => $max_tokens,
+        'temperature' => $temperature,
+      ]);
+
       $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
         'headers' => [
           'Authorization' => 'Bearer ' . $api_key,
@@ -61,10 +77,14 @@ class OpenAIService {
 
       $this->cache->set($cid, $content);
 
+      $this->loggingService->logSystemEvent('openai_api_response', 'Received response from OpenAI API', [
+        'response_length' => strlen($content),
+      ]);
+
       return $content;
     }
     catch (RequestException $e) {
-      $this->logger->error('OpenAI API request failed: @error', ['@error' => $e->getMessage()]);
+      $this->loggingService->logError('OpenAI API request failed: ' . $e->getMessage());
       throw new \Exception('Failed to get a response from OpenAI.');
     }
   }
