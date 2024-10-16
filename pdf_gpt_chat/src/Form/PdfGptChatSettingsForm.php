@@ -19,11 +19,23 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
     $config = $this->config('pdf_gpt_chat.settings');
   
     $form['openai_api_key'] = [
-      '#type' => 'textfield',
+      '#type' => 'textarea',
       '#title' => $this->t('OpenAI API Key'),
-      '#description' => $this->t('Enter your OpenAI API key.'),
+      '#description' => $this->t('Enter your OpenAI API key. Use a textarea to accommodate longer keys.'),
       '#default_value' => $config->get('openai_api_key'),
       '#required' => TRUE,
+      '#rows' => 2,
+      '#resizable' => 'vertical',
+    ];
+  
+    $form['system_prompt'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('System Prompt'),
+      '#description' => $this->t('Enter the system prompt to be used for the AI. This sets the context for the AI\'s responses.'),
+      '#default_value' => $config->get('system_prompt') ?: 'You are a helpful assistant that answers questions about PDF documents.',
+      '#required' => TRUE,
+      '#rows' => 4,
+      '#resizable' => 'vertical',
     ];
   
     $form['openai_model'] = [
@@ -63,12 +75,20 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
   
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $this->config('pdf_gpt_chat.settings')
-      ->set('openai_api_key', $form_state->getValue('openai_api_key'))
+      ->set('openai_api_key', trim($form_state->getValue('openai_api_key')))
+      ->set('system_prompt', $form_state->getValue('system_prompt'))
       ->set('openai_model', $form_state->getValue('openai_model'))
       ->set('max_tokens', $form_state->getValue('max_tokens'))
       ->set('temperature', $form_state->getValue('temperature'))
       ->save();
   
     parent::submitForm($form, $form_state);
+  }
+
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $api_key = $form_state->getValue('openai_api_key');
+    if (preg_match('/\s/', $api_key)) {
+      $form_state->setErrorByName('openai_api_key', $this->t('The API key should not contain any whitespace characters.'));
+    }
   }
 }

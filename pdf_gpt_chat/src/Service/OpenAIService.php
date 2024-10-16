@@ -37,6 +37,7 @@ class OpenAIService {
     $model = $config->get('openai_model') ?: 'gpt-3.5-turbo';
     $max_tokens = $config->get('max_tokens') ?: 4096;
     $temperature = $config->get('temperature') ?: 0.7;
+    $system_prompt = $config->get('system_prompt') ?: 'You are a helpful assistant that answers questions about PDF documents.';
 
     try {
       $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
@@ -47,7 +48,7 @@ class OpenAIService {
         'json' => [
           'model' => $model,
           'messages' => [
-            ['role' => 'system', 'content' => 'You are a helpful assistant that answers questions about PDF documents.'],
+            ['role' => 'system', 'content' => $system_prompt],
             ['role' => 'user', 'content' => $prompt],
           ],
           'max_tokens' => $max_tokens,
