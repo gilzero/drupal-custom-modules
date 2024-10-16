@@ -1,6 +1,29 @@
-<div class="pdf-gpt-chat-result">
-  <h3>{{ 'Question'|t }}</h3>
-  <p>{{ question }}</p>
-  <h3>{{ 'Answer'|t }}</h3>
-  <p>{{ answer }}</p>
+{#
+/**
+ * @file
+ * Default theme implementation for PDF GPT Chat result.
+ *
+ * Available variables:
+ * - question: The user's question.
+ * - answer: The AI's answer.
+ */
+#}
+<div class="pdf-gpt-chat-result" aria-live="polite">
+  <div class="chat-message user-message" tabindex="0">
+    <strong>{{ 'You'|t }}:</strong>
+    <span class="user-question">{{ question }}</span>
+  </div>
+  
+  <div class="chat-message ai-message" tabindex="0">
+    <strong>{{ 'AI'|t }}:</strong>
+    <div class="ai-answer markdown-content">
+      {{ answer|raw }}
+    </div>
+  </div>
+</div>
+
+<div class="typing-indicator" aria-hidden="true">
+  <span></span>
+  <span></span>
+  <span></span>
 </div>

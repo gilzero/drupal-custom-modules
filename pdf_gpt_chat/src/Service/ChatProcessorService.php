@@ -32,6 +32,7 @@ class ChatProcessorService {
   }
 
   protected function preparePrompt($pdf_text, $question) {
-    return "PDF Content: $pdf_text\n\nQuestion: $question";
+    $context = substr($pdf_text, 0, 3000);
+    return "Context from PDF: $context\n\nQuestion: $question\n\nPlease answer the question based on the given context from the PDF.";
   }
 }

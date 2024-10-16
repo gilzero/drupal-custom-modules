@@ -60,6 +60,9 @@ class PdfGptChatForm extends FormBase {
       '#type' => 'textarea',
       '#title' => $this->t('Ask a question about the PDF'),
       '#required' => TRUE,
+      '#attributes' => [
+        'aria-label' => $this->t('Enter your question here'),
+      ],
     ];
 
     $form['submit'] = [
@@ -77,7 +80,11 @@ class PdfGptChatForm extends FormBase {
 
     $form['chat_log'] = [
       '#type' => 'container',
-      '#attributes' => ['id' => 'pdf-gpt-chat-log'],
+      '#attributes' => [
+        'id' => 'pdf-gpt-chat-log',
+        'aria-live' => 'polite',
+        'aria-relevant' => 'additions',
+      ],
       '#weight' => 90,
     ];
 
