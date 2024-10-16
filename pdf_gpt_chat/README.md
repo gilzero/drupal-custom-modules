@@ -25,7 +25,7 @@ The PDF GPT Chat module for Drupal 11 allows users to upload PDF documents and a
 ## Requirements
 
 - Drupal 11
-- PHP 8.1 or higher
+- PHP 8.3 or higher
 - OpenAI API key
 
 ## Installation
@@ -82,3 +82,7 @@ This module uses the following libraries:
 ## Version History
 
 For the latest updates and more information, please visit the module's GitHub repository.
+
+## Author
+
+Weiming Chen @gilzero
