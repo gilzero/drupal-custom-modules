@@ -19,3 +19,14 @@ services:
 
   pdf_gpt_chat.message_formatter:
     class: Drupal\pdf_gpt_chat\Service\MessageFormatterService
+
+  pdf_gpt_chat.chat_processor:
+    class: Drupal\pdf_gpt_chat\Service\ChatProcessorService
+    arguments: ['@pdf_gpt_chat.pdf_parser', '@pdf_gpt_chat.openai', '@pdf_gpt_chat.chat_history', '@pdf_gpt_chat.message_formatter']
+
+  pdf_gpt_chat.error_handler:
+    class: Drupal\pdf_gpt_chat\Service\ErrorHandlerService
+
+  pdf_gpt_chat.file_handler:
+    class: Drupal\pdf_gpt_chat\Service\FileHandlerService
+    arguments: ['@file.validator']
