@@ -58,7 +58,7 @@ class ConfigForm extends ConfigFormBase {
             '#default_value' => $config->get('model_name'),
             '#options' => $this->openAIService->getAvailableModels(),
             '#required' => TRUE,
-            '#description' => $this->t('Select the AI model for your integration. GPT-4o is the flagship model for complex tasks, while GPT-4o mini is more affordable for simpler tasks.'),
+            '#description' => $this->t('Select the AI model for your integration.'),
         ];
 
         $form['system_prompt'] = [
@@ -68,6 +68,37 @@ class ConfigForm extends ConfigFormBase {
             '#description' => $this->t('Enter a system prompt or default question for the AI.'),
             '#rows' => 5,
             '#required' => FALSE,
+        ];
+
+        $form['max_tokens'] = [
+            '#type' => 'number',
+            '#title' => $this->t('Max Tokens'),
+            '#default_value' => $config->get('max_tokens') ?? 4096,
+            '#description' => $this->t('The maximum number of tokens to generate in the response.'),
+            '#min' => 1,
+            '#max' => 8192,
+            '#required' => TRUE,
+        ];
+
+        $form['temperature'] = [
+            '#type' => 'number',
+            '#title' => $this->t('Temperature'),
+            '#default_value' => $config->get('temperature') ?? 0.3,
+            '#description' => $this->t('Controls randomness: Lowering results in less random completions. As the temperature approaches zero, the model will become deterministic and repetitive.'),
+            '#min' => 0,
+            '#max' => 2,
+            '#step' => 0.1,
+            '#required' => TRUE,
+        ];
+
+        $form['max_conversation_length'] = [
+            '#type' => 'number',
+            '#title' => $this->t('Max Conversation Length'),
+            '#default_value' => $config->get('max_conversation_length') ?? 20,
+            '#description' => $this->t('The maximum number of messages to keep in the conversation history.'),
+            '#min' => 1,
+            '#max' => 100,
+            '#required' => TRUE,
         ];
 
         return parent::buildForm($form, $form_state);
@@ -113,6 +144,9 @@ class ConfigForm extends ConfigFormBase {
             ->set('openai_api_key', trim($form_state->getValue('openai_api_key')))
             ->set('model_name', $form_state->getValue('model_name'))
             ->set('system_prompt', $form_state->getValue('system_prompt'))
+            ->set('max_tokens', $form_state->getValue('max_tokens'))
+            ->set('temperature', $form_state->getValue('temperature'))
+            ->set('max_conversation_length', $form_state->getValue('max_conversation_length'))
             ->save();
     }
 }

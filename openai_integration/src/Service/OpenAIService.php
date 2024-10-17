@@ -14,9 +14,11 @@ class OpenAIService {
     protected $configFactory;
     protected $messenger;
     protected $model;
+    protected $maxTokens;
+    protected $temperature;
+    protected $maxConversationLength;
 
     const MAX_PROMPT_LENGTH = 4096;
-    const MAX_CONVERSATION_LENGTH = 10;
 
     public function __construct(
         OpenAIAPIClientInterface $apiClient,
@@ -30,7 +32,15 @@ class OpenAIService {
         $this->logger = $loggerFactory->get('openai_integration');
         $this->configFactory = $configFactory;
         $this->messenger = $messenger;
-        $this->model = $this->configFactory->get('openai_integration.settings')->get('model_name');
+        $this->loadConfig();
+    }
+
+    private function loadConfig() {
+        $config = $this->configFactory->get('openai_integration.settings');
+        $this->model = $config->get('model_name');
+        $this->maxTokens = $config->get('max_tokens') ?? 150;
+        $this->temperature = $config->get('temperature') ?? 0.7;
+        $this->maxConversationLength = $config->get('max_conversation_length') ?? 10;
     }
 
     public function generateResponse($prompt) {
@@ -54,7 +64,7 @@ class OpenAIService {
     private function addToConversation($role, $content) {
         $conversation = $this->getConversationHistory();
         $conversation[] = ['role' => $role, 'content' => $content];
-        $conversation = array_slice($conversation, -self::MAX_CONVERSATION_LENGTH);
+        $conversation = array_slice($conversation, -$this->maxConversationLength);
         $this->saveConversationHistory($conversation);
     }
 
@@ -64,6 +74,8 @@ class OpenAIService {
             $response = $this->apiClient->sendRequest('/chat/completions', [
                 'model' => $this->model,
                 'messages' => $conversation,
+                'max_tokens' => $this->maxTokens,
+                'temperature' => $this->temperature,
             ]);
             $responseContent = $response['choices'][0]['message']['content'] ?? 'No response content available.';
             $this->addToConversation('assistant', $responseContent);

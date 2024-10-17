@@ -1,0 +1,22 @@
+openai_integration.settings:
+  type: config_object
+  label: 'OpenAI Integration settings'
+  mapping:
+    openai_api_key:
+      type: string
+      label: 'OpenAI API Key'
+    model_name:
+      type: string
+      label: 'Model Name'
+    system_prompt:
+      type: text
+      label: 'System Prompt'
+    max_tokens:
+      type: integer
+      label: 'Max Tokens'
+    temperature:
+      type: float
+      label: 'Temperature'
+    max_conversation_length:
+      type: integer
+      label: 'Max Conversation Length'
