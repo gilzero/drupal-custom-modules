@@ -22,8 +22,7 @@ The OpenAI Integration module provides seamless integration between Drupal and t
 
 ## Installation
 
-1. Download the OpenAI Integration module from the Drupal.org project page or via Composer:
-`composer require drupal/openai_integration`
+1. Download the OpenAI Integration module `modules/custom`
 
 
 2. Enable the module using Drush or through the Drupal admin interface:
@@ -55,7 +54,7 @@ The OpenAI Integration module provides seamless integration between Drupal and t
 The module provides a configuration form at `/admin/config/services/openai` where you can customize the following settings:
 
 - OpenAI API Key: Enter your OpenAI API key to authenticate with the OpenAI API.
-- Model Name: Select the desired language model for generating responses (e.g., GPT-3.5, GPT-4, GPT-4 Turbo).
+- Model Name: Select the desired language model for generating responses (e.g., GPT-4o).
 - System Prompt: Customize the initial prompt or instructions for the AI assistant (optional).
 
 Make sure to save the configuration after making any changes.
@@ -85,4 +84,4 @@ The OpenAI Integration module is maintained by Weiming and is not affiliated wit
 
 ## Contact
 
-For questions, suggestions, or support requests, please contact the module maintainer at [Your Email Address].
+For questions, suggestions, or support requests, please contact the module maintainer at @gilzero.
