@@ -1,0 +1,15 @@
+services:
+  openai_integration.openai_api_client:
+    class: Drupal\openai_integration\Service\OpenAIAPIClient
+    arguments: ['@http_client', '@config.factory', '@logger.factory']
+    tags:
+      - { name: 'openai_client' }
+
+  openai_integration.openai_service:
+    class: Drupal\openai_integration\Service\OpenAIService
+    arguments: ['@openai_integration.openai_api_client', '@session', '@logger.factory', '@config.factory', '@messenger']
+
+  openai_integration.logger:
+    class: Drupal\Core\Logger\LoggerChannel
+    factory: ['@logger.factory', 'get']
+    arguments: ['openai_integration']

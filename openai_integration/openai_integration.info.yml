@@ -1,0 +1,5 @@
+name: 'OpenAI Integration'
+type: module
+description: 'A module to integrate OpenAI API.'
+core_version_requirement: ^9 || ^10 || ^11
+package: Custom

@@ -1,0 +1,6 @@
+openai_integration.settings:
+  title: 'OpenAI Integration Settings'
+  description: 'Configure OpenAI API settings.'
+  parent: system.admin_config_services
+  route_name: openai_integration.settings
+  weight: 100

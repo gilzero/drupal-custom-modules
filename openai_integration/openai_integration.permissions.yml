@@ -1,0 +1,7 @@
+access openai chatbot:
+  title: 'Access OpenAI Chatbot'
+  description: 'Allows access to the OpenAI chatbot form.'
+
+submit openai form:
+  title: 'Submit OpenAI form'
+  description: 'Allows users to submit the OpenAI form and interact with the AI assistant.'

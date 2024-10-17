@@ -1,0 +1,10 @@
+<?php
+
+function openai_integration_permission() {
+  return [
+    'submit openai form' => [
+      'title' => t('Submit OpenAI form'),
+      'description' => t('Allows users to submit the OpenAI form and interact with the AI assistant.'),
+    ],
+  ];
+}
