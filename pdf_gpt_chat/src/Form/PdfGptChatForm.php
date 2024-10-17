@@ -103,37 +103,43 @@ class PdfGptChatForm extends FormBase {
   }
 
   public function ajaxSubmitCallback(array &$form, FormStateInterface $form_state) {
+    $requestId = uniqid('chat_request_');
+    
     try {
       $fid = $form_state->getValue('pdf_file')[0];
       $file = $this->fileHandler->validateAndLoadFile($fid);
       $question = $form_state->getValue('question');
-
+  
       $this->loggingService->logSystemEvent('chat_process_start', 'Starting chat process', [
+        'request_id' => $requestId,
         'file_id' => $fid,
         'user_id' => $this->currentUser()->id(),
       ]);
-
+  
       $output = $this->chatProcessor->processChat($file, $question);
-
+  
       $this->loggingService->logInteraction(
         $this->currentUser()->id(),
         $fid,
         $question,
-        $output
+        $output,
+        $requestId
       );
-
+  
       $ajax_response = new AjaxResponse();
       $ajax_response->addCommand(new AppendCommand('#pdf-gpt-chat-log', $output));
-
+  
       $this->loggingService->logSystemEvent('chat_process_end', 'Chat process completed successfully', [
+        'request_id' => $requestId,
         'file_id' => $fid,
         'user_id' => $this->currentUser()->id(),
       ]);
-
+  
       return $ajax_response;
     }
     catch (\Exception $e) {
       $this->loggingService->logError('Error in chat process: ' . $e->getMessage(), [
+        'request_id' => $requestId,
         'exception' => $e,
       ]);
       return $this->errorHandler->handleAjaxError($e);

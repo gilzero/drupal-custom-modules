@@ -5,7 +5,7 @@ namespace Drupal\pdf_gpt_chat\Service;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\file\Entity\File;
-use Smalot\PdfParser\Parser;
+use Imagick;
 
 class PdfParserService {
 
@@ -23,37 +23,44 @@ class PdfParserService {
     $this->loggingService = $logging_service;
   }
 
-  public function extractText(File $file) {
-    $cid = 'pdf_gpt_chat:pdf_content:' . $file->id();
+  public function convertPdfToImages(File $file, $maxImages = 250) {
+    $cid = 'pdf_gpt_chat:pdf_images:' . $file->id();
     
-    $this->loggingService->logSystemEvent('pdf_parse_start', 'Starting PDF parsing', [
+    $this->loggingService->logSystemEvent('pdf_conversion_start', 'Starting PDF to image conversion', [
       'file_id' => $file->id(),
       'file_name' => $file->getFilename(),
     ]);
 
     if ($cache = $this->cache->get($cid)) {
-      $this->loggingService->logSystemEvent('pdf_parse_cache_hit', 'PDF content retrieved from cache', [
+      $this->loggingService->logSystemEvent('pdf_conversion_cache_hit', 'PDF images retrieved from cache', [
         'file_id' => $file->id(),
       ]);
       return $cache->data;
     }
 
     try {
-      $parser = new Parser();
-      $pdf = $parser->parseFile($file->getFileUri());
-      $text = $pdf->getText();
+      $images = [];
+      $imagick = new Imagick();
+      $imagick->readImage($file->getFileUri());
+      foreach ($imagick as $index => $page) {
+        if ($index >= $maxImages) {
+          break;
+        }
+        $page->setImageFormat('png');
+        $images[] = base64_encode($page->getImageBlob());
+      }
 
-      $this->cache->set($cid, $text);
+      $this->cache->set($cid, $images);
 
-      $this->loggingService->logSystemEvent('pdf_parse_success', 'PDF parsed successfully', [
+      $this->loggingService->logSystemEvent('pdf_conversion_success', 'PDF converted to images successfully', [
         'file_id' => $file->id(),
-        'text_length' => strlen($text),
+        'image_count' => count($images),
       ]);
 
-      return $text;
+      return $images;
     }
     catch (\Exception $e) {
-      $this->loggingService->logError('PDF parsing failed: ' . $e->getMessage(), [
+      $this->loggingService->logError('PDF to image conversion failed: ' . $e->getMessage(), [
         'file_id' => $file->id(),
         'exception' => $e,
       ]);

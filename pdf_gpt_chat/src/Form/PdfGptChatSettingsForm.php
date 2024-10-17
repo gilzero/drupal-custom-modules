@@ -34,7 +34,6 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
     
     $this->loggingService->logSystemEvent('settings_form_build', 'Building PDF GPT Chat settings form');
 
-
     $form['openai_api_key'] = [
       '#type' => 'textarea',
       '#title' => $this->t('OpenAI API Key'),
@@ -65,7 +64,7 @@ class PdfGptChatSettingsForm extends ConfigFormBase {
         'gpt-4-turbo' => $this->t('GPT-4 Turbo'),
         'gpt-3.5-turbo' => $this->t('GPT-3.5 Turbo'),
       ],
-      '#default_value' => $config->get('openai_model') ?: 'gpt-3.5-turbo',
+      '#default_value' => $config->get('openai_model') ?: 'gpt-4o',
     ];
   
     $form['max_tokens'] = [

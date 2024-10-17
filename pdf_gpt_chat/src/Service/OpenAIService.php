@@ -30,8 +30,8 @@ class OpenAIService {
     $this->loggingService = $logging_service;
   }
 
-  public function query(string $prompt) {
-    $cid = 'pdf_gpt_chat:openai_response:' . md5($prompt);
+  public function query(string $prompt, array $images = []) {
+    $cid = 'pdf_gpt_chat:openai_response:' . md5($prompt . implode('', $images));
     if ($cache = $this->cache->get($cid)) {
       $this->loggingService->logSystemEvent('openai_cache_hit', 'OpenAI response retrieved from cache');
       return $cache->data;
@@ -44,7 +44,7 @@ class OpenAIService {
       throw new \Exception('OpenAI API key is not configured.');
     }
 
-    $model = $config->get('openai_model') ?: 'gpt-3.5-turbo';
+    $model = $config->get('openai_model') ?: 'gpt-4o';
     $max_tokens = $config->get('max_tokens') ?: 4096;
     $temperature = $config->get('temperature') ?: 0.7;
     $system_prompt = $config->get('system_prompt') ?: 'You are a helpful assistant that answers questions about PDF documents.';
@@ -54,19 +54,32 @@ class OpenAIService {
         'model' => $model,
         'max_tokens' => $max_tokens,
         'temperature' => $temperature,
+        'image_count' => count($images),
       ]);
 
+      $messages = [
+        ['role' => 'system', 'content' => $system_prompt],
+        ['role' => 'user', 'content' => [
+          ['type' => 'text', 'text' => $prompt],
+        ]],
+      ];
+
+      foreach ($images as $image) {
+        $messages[1]['content'][] = [
+          'type' => 'image_url',
+          'image_url' => ['url' => "data:image/png;base64,$image"],
+        ];
+      }
+
       $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
+        'timeout' => 60, // Increase timeout to 60 seconds
         'headers' => [
           'Authorization' => 'Bearer ' . $api_key,
           'Content-Type' => 'application/json',
         ],
         'json' => [
           'model' => $model,
-          'messages' => [
-            ['role' => 'system', 'content' => $system_prompt],
-            ['role' => 'user', 'content' => $prompt],
-          ],
+          'messages' => $messages,
           'max_tokens' => $max_tokens,
           'temperature' => $temperature,
         ],
@@ -85,7 +98,7 @@ class OpenAIService {
     }
     catch (RequestException $e) {
       $this->loggingService->logError('OpenAI API request failed: ' . $e->getMessage());
-      throw new \Exception('Failed to get a response from OpenAI.');
+      throw new \Exception('Failed to get a response from OpenAI: ' . $e->getMessage());
     }
   }
 }

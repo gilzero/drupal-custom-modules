@@ -32,17 +32,28 @@ class ChatProcessorService {
     ]);
 
     try {
-      $pdf_text = $this->pdfParser->extractText($file);
-      $prompt = $this->preparePrompt($pdf_text, $question);
-      $response = $this->openAI->query($prompt);
-      $output = $this->messageFormatter->formatMessage($question, $response);
-      $this->chatHistory->saveMessage($file->getOwnerId(), $file->id(), $question, $response);
+      $pdf_images = $this->pdfParser->convertPdfToImages($file, 250);
+      $totalImages = count($pdf_images);
+      $chunks = array_chunk($pdf_images, 250);
+      $responses = [];
 
-      $this->loggingService->logInteraction($file->getOwnerId(), $file->id(), $question, $response);
+      foreach ($chunks as $index => $chunk) {
+        $chunkPrompt = $this->preparePrompt($question, $index + 1, count($chunks));
+        $response = $this->openAI->query($chunkPrompt, $chunk);
+        $responses[] = $response;
+      }
+
+      $combinedResponse = $this->combineResponses($responses);
+      $output = $this->messageFormatter->formatMessage($question, $combinedResponse);
+      $this->chatHistory->saveMessage($file->getOwnerId(), $file->id(), $question, $combinedResponse);
+
+      $this->loggingService->logInteraction($file->getOwnerId(), $file->id(), $question, $combinedResponse);
 
       $this->loggingService->logSystemEvent('chat_process_end', 'Chat process completed successfully', [
         'file_id' => $file->id(),
         'user_id' => $file->getOwnerId(),
+        'total_images' => $totalImages,
+        'chunks_processed' => count($chunks),
       ]);
 
       return $output;
@@ -56,8 +67,11 @@ class ChatProcessorService {
     }
   }
 
-  protected function preparePrompt($pdf_text, $question) {
-    $context = substr($pdf_text, 0, 3000);
-    return "Context from PDF: $context\n\nQuestion: $question\n\nPlease answer the question based on the given context from the PDF.";
+  protected function preparePrompt($question, $chunkNumber, $totalChunks) {
+    return "This is part $chunkNumber of $totalChunks of the PDF. Please answer the following question based on the content of the provided PDF images: $question";
+  }
+
+  protected function combineResponses($responses) {
+    return "Combined response from " . count($responses) . " parts of the PDF:\n\n" . implode("\n\n", $responses);
   }
 }
